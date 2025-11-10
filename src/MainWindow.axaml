@@ -3,7 +3,7 @@
         xmlns:models="using:TodoListApp.Models"
         x:Class="TodoListApp.MainWindow"
         Title="To-Do List"
-        Width="400" Height="600">
+        Width="420" Height="700">
 
     <StackPanel Margin="20">
         <TextBlock Text="My To-Do List" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,10"/>
@@ -13,17 +13,31 @@
             <Button x:Name="AddButton" Content="Add" Margin="10,0,0,0" Width="80"/>
         </StackPanel>
 
-        <TextBox x:Name="TagsInput" Width="340" Watermark="Tags (comma-separated, e.g., work, urgent)" Margin="0,0,0,10"/>
+        <TextBox x:Name="TagsInput" Width="340" Watermark="Tags (comma-separated, e.g., work, urgent)" Margin="0,0,0,5"/>
+
+        <!-- Date Picker -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Due date:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <DatePicker x:Name="DueDatePicker" Width="250"/>
+        </StackPanel>
+
+        <!-- Filtres temporels -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+            <TextBlock Text="Quick filters:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Button x:Name="TodayFilterButton" Content="Today" Width="60" Margin="0,0,5,0"/>
+            <Button x:Name="WeekFilterButton" Content="This Week" Width="80" Margin="0,0,5,0"/>
+            <Button x:Name="OverdueFilterButton" Content="Overdue" Width="70" Margin="0,0,5,0"/>
+        </StackPanel>
 
         <!-- Filtre de tags -->
         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Filter by tag:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBox x:Name="TagFilterInput" Width="150" Watermark="Enter tag..."/>
+            <TextBox x:Name="TagFilterInput" Width="120" Watermark="Enter tag..."/>
             <Button x:Name="FilterButton" Content="Filter" Margin="10,0,5,0" Width="60"/>
-            <Button x:Name="ClearFilterButton" Content="Clear" Width="60"/>
+            <Button x:Name="ClearFilterButton" Content="Clear All" Width="70"/>
         </StackPanel>
 
-        <ListBox x:Name="TaskList" Height="300">
+        <ListBox x:Name="TaskList" Height="250">
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:TaskItem">
                     <StackPanel Margin="0,5,0,5">
@@ -36,6 +50,21 @@
                                    FontSize="11"
                                    Margin="25,2,0,0"
                                    IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <StackPanel Orientation="Horizontal" Margin="25,2,0,0">
+                            <TextBlock Text="📅 Due: " 
+                                       Foreground="DarkBlue" 
+                                       FontSize="11"
+                                       IsVisible="{Binding DueDate, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            <TextBlock Text="{Binding DueDate, StringFormat='dd/MM/yyyy'}" 
+                                       FontSize="11"
+                                       IsVisible="{Binding DueDate, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            <TextBlock Text=" ⚠️ OVERDUE" 
+                                       Foreground="Red" 
+                                       FontWeight="Bold"
+                                       FontSize="11"
+                                       Margin="10,0,0,0"
+                                       IsVisible="{Binding IsOverdue}"/>
+                        </StackPanel>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

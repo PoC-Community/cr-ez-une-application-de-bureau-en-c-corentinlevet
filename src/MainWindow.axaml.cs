@@ -27,6 +27,9 @@ public partial class MainWindow : Window
         SaveButton.Click += OnSaveClick;
         FilterButton.Click += OnFilterClick;
         ClearFilterButton.Click += OnClearFilterClick;
+        TodayFilterButton.Click += OnTodayFilterClick;
+        WeekFilterButton.Click += OnWeekFilterClick;
+        OverdueFilterButton.Click += OnOverdueFilterClick;
 
         // Charger les tâches au démarrage
         LoadTasks();
@@ -39,7 +42,8 @@ public partial class MainWindow : Window
             var task = new TaskItem 
             { 
                 Title = TaskInput.Text,
-                Tags = CleanupTags(TagsInput.Text ?? string.Empty)
+                Tags = CleanupTags(TagsInput.Text ?? string.Empty),
+                DueDate = DueDatePicker.SelectedDate?.DateTime
             };
             
             _tasks.Add(task);
@@ -47,6 +51,7 @@ public partial class MainWindow : Window
             
             TaskInput.Text = string.Empty;
             TagsInput.Text = string.Empty;
+            DueDatePicker.SelectedDate = null;
         }
     }
 
@@ -111,6 +116,60 @@ public partial class MainWindow : Window
         TagFilterInput.Text = string.Empty;
         StatusText.Text = $"✓ Filter cleared - showing all {_allTasks.Count} task(s)";
         StatusText.Foreground = Avalonia.Media.Brushes.Blue;
+    }
+
+    private void OnTodayFilterClick(object? sender, RoutedEventArgs e)
+    {
+        var today = DateTime.Now.Date;
+        
+        _tasks.Clear();
+        var filteredTasks = _allTasks.Where(t => 
+            t.DueDate.HasValue && 
+            t.DueDate.Value.Date == today
+        ).ToList();
+
+        foreach (var task in filteredTasks)
+        {
+            _tasks.Add(task);
+        }
+
+        StatusText.Text = $"✓ Tasks due today - {filteredTasks.Count} task(s) found";
+        StatusText.Foreground = Avalonia.Media.Brushes.Blue;
+    }
+
+    private void OnWeekFilterClick(object? sender, RoutedEventArgs e)
+    {
+        var today = DateTime.Now.Date;
+        var weekFromNow = today.AddDays(7);
+        
+        _tasks.Clear();
+        var filteredTasks = _allTasks.Where(t => 
+            t.DueDate.HasValue && 
+            t.DueDate.Value.Date >= today &&
+            t.DueDate.Value.Date <= weekFromNow
+        ).ToList();
+
+        foreach (var task in filteredTasks)
+        {
+            _tasks.Add(task);
+        }
+
+        StatusText.Text = $"✓ Tasks due this week - {filteredTasks.Count} task(s) found";
+        StatusText.Foreground = Avalonia.Media.Brushes.Blue;
+    }
+
+    private void OnOverdueFilterClick(object? sender, RoutedEventArgs e)
+    {
+        _tasks.Clear();
+        var filteredTasks = _allTasks.Where(t => t.IsOverdue).ToList();
+
+        foreach (var task in filteredTasks)
+        {
+            _tasks.Add(task);
+        }
+
+        StatusText.Text = $"⚠️ Overdue tasks - {filteredTasks.Count} task(s) found";
+        StatusText.Foreground = Avalonia.Media.Brushes.Red;
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)

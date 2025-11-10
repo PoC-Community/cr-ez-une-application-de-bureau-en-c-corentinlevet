@@ -11,6 +11,10 @@ public class TaskItem : INotifyPropertyChanged
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Title { get; set; } = string.Empty;
     public string Tags { get; set; } = string.Empty;
+    public DateTime? DueDate { get; set; }
+    
+    // Propriété calculée pour savoir si la tâche est en retard
+    public bool IsOverdue => DueDate.HasValue && DueDate.Value.Date < DateTime.Now.Date && !IsCompleted;
     
     public bool IsCompleted
     {
