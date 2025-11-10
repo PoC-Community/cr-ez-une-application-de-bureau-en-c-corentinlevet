@@ -16,6 +16,9 @@ public partial class MainWindow : Window
     private List<TaskItem> _allTasks = new();
     private const string DataFolder = "data";
     private const string JsonFilePath = "data/tasks.json";
+    private const string BackupFilePath = "data/tasks.backup.json";
+    private System.Threading.Timer? _autoSaveTimer;
+    private bool _hasUnsavedChanges = false;
 
     public MainWindow()
     {
@@ -33,8 +36,16 @@ public partial class MainWindow : Window
         CompleteAllButton.Click += OnCompleteAllClick;
         ClearCompletedButton.Click += OnClearCompletedClick;
 
-        // Charger les tâches au démarrage
-        LoadTasks();
+        // Initialiser le timer d'auto-save (toutes les 30 secondes)
+        _autoSaveTimer = new System.Threading.Timer(
+            AutoSaveCallback, 
+            null, 
+            TimeSpan.FromSeconds(30), 
+            TimeSpan.FromSeconds(30)
+        );
+
+        // Charger les tâches au démarrage avec récupération
+        LoadTasksWithRecovery();
     }
 
     private void OnAddClick(object? sender, RoutedEventArgs e)
@@ -54,6 +65,10 @@ public partial class MainWindow : Window
             TaskInput.Text = string.Empty;
             TagsInput.Text = string.Empty;
             DueDatePicker.SelectedDate = null;
+
+            // Marquer les changements et auto-save
+            MarkUnsavedChanges();
+            AutoSaveImmediate();
         }
     }
 
@@ -78,6 +93,9 @@ public partial class MainWindow : Window
         {
             _tasks.Remove(selected);
             _allTasks.Remove(selected);
+            
+            MarkUnsavedChanges();
+            AutoSaveImmediate();
         }
     }
 
@@ -176,34 +194,9 @@ public partial class MainWindow : Window
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
-        try
-        {
-            // Créer le dossier data s'il n'existe pas
-            if (!Directory.Exists(DataFolder))
-            {
-                Directory.CreateDirectory(DataFolder);
-            }
-
-            // Sérialiser la collection complète de tâches (pas juste la vue filtrée)
-            var options = new JsonSerializerOptions 
-            { 
-                WriteIndented = true 
-            };
-            string jsonString = JsonSerializer.Serialize(_allTasks, options);
-
-            // Écrire le JSON dans le fichier
-            File.WriteAllText(JsonFilePath, jsonString);
-
-            // Afficher un message de confirmation
-            StatusText.Text = $"✓ Tasks saved successfully! ({_allTasks.Count} tasks)";
-            StatusText.Foreground = Avalonia.Media.Brushes.Green;
-        }
-        catch (Exception ex)
-        {
-            // Gérer les erreurs (permissions, espace disque, etc.)
-            StatusText.Text = $"✗ Error saving tasks: {ex.Message}";
-            StatusText.Foreground = Avalonia.Media.Brushes.Red;
-        }
+        AutoSaveImmediate();
+        StatusText.Text = $"💾 Manual save complete! ({_allTasks.Count} tasks)";
+        StatusText.Foreground = Avalonia.Media.Brushes.Green;
     }
 
     private void LoadTasks()
@@ -265,6 +258,9 @@ public partial class MainWindow : Window
 
         StatusText.Text = $"✓ All tasks marked as completed ({_allTasks.Count} tasks)";
         StatusText.Foreground = Avalonia.Media.Brushes.Green;
+        
+        MarkUnsavedChanges();
+        AutoSaveImmediate();
     }
 
     private void OnClearCompletedClick(object? sender, RoutedEventArgs e)
@@ -280,6 +276,9 @@ public partial class MainWindow : Window
 
         StatusText.Text = $"✓ Cleared {count} completed task(s)";
         StatusText.Foreground = Avalonia.Media.Brushes.Green;
+        
+        MarkUnsavedChanges();
+        AutoSaveImmediate();
     }
 
     private async void OnTaskListDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
@@ -361,6 +360,9 @@ public partial class MainWindow : Window
                         
                         StatusText.Text = "✓ Task updated";
                         StatusText.Foreground = Avalonia.Media.Brushes.Green;
+                        
+                        MarkUnsavedChanges();
+                        AutoSaveImmediate();
                     }
                     dialog.Close();
                 };
@@ -378,6 +380,148 @@ public partial class MainWindow : Window
 
                 await dialog.ShowDialog(this);
             }
+        }
+    }
+
+    private void MarkUnsavedChanges()
+    {
+        _hasUnsavedChanges = true;
+    }
+
+    private void AutoSaveCallback(object? state)
+    {
+        if (_hasUnsavedChanges)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => 
+            {
+                AutoSaveImmediate();
+            });
+        }
+    }
+
+    private void AutoSaveImmediate()
+    {
+        try
+        {
+            // Créer le dossier data s'il n'existe pas
+            if (!Directory.Exists(DataFolder))
+            {
+                Directory.CreateDirectory(DataFolder);
+            }
+
+            // Créer une backup avant de sauvegarder
+            if (File.Exists(JsonFilePath))
+            {
+                try
+                {
+                    File.Copy(JsonFilePath, BackupFilePath, overwrite: true);
+                }
+                catch
+                {
+                    // Ignorer les erreurs de backup
+                }
+            }
+
+            // Sérialiser la collection complète de tâches
+            var options = new JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            };
+            string jsonString = JsonSerializer.Serialize(_allTasks, options);
+
+            // Écrire le JSON dans le fichier
+            File.WriteAllText(JsonFilePath, jsonString);
+
+            _hasUnsavedChanges = false;
+
+            // Mise à jour subtile du statut
+            var now = DateTime.Now.ToString("HH:mm:ss");
+            StatusText.Text = $"💾 Auto-saved at {now} ({_allTasks.Count} tasks)";
+            StatusText.Foreground = Avalonia.Media.Brushes.Gray;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            StatusText.Text = "✗ Error: No permission to save file";
+            StatusText.Foreground = Avalonia.Media.Brushes.Red;
+        }
+        catch (IOException ex)
+        {
+            StatusText.Text = $"✗ Error: Unable to save ({ex.Message})";
+            StatusText.Foreground = Avalonia.Media.Brushes.Red;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"✗ Error saving: {ex.Message}";
+            StatusText.Foreground = Avalonia.Media.Brushes.Red;
+        }
+    }
+
+    private void LoadTasksWithRecovery()
+    {
+        try
+        {
+            // Essayer de charger le fichier principal
+            if (File.Exists(JsonFilePath))
+            {
+                LoadFromFile(JsonFilePath);
+            }
+            else if (File.Exists(BackupFilePath))
+            {
+                // Si le fichier principal n'existe pas, essayer le backup
+                StatusText.Text = "⚠️ Loading from backup file...";
+                StatusText.Foreground = Avalonia.Media.Brushes.Orange;
+                LoadFromFile(BackupFilePath);
+            }
+            else
+            {
+                // Aucun fichier trouvé
+                StatusText.Text = "No saved tasks found. Starting fresh!";
+                StatusText.Foreground = Avalonia.Media.Brushes.Gray;
+            }
+        }
+        catch (JsonException)
+        {
+            // JSON corrompu, essayer le backup
+            if (File.Exists(BackupFilePath))
+            {
+                try
+                {
+                    StatusText.Text = "⚠️ Main file corrupted. Restoring from backup...";
+                    StatusText.Foreground = Avalonia.Media.Brushes.Orange;
+                    LoadFromFile(BackupFilePath);
+                }
+                catch
+                {
+                    StatusText.Text = "✗ Both files corrupted. Starting fresh!";
+                    StatusText.Foreground = Avalonia.Media.Brushes.Red;
+                }
+            }
+            else
+            {
+                StatusText.Text = "✗ File corrupted and no backup. Starting fresh!";
+                StatusText.Foreground = Avalonia.Media.Brushes.Red;
+            }
+        }
+    }
+
+    private void LoadFromFile(string filePath)
+    {
+        string jsonString = File.ReadAllText(filePath);
+        var tasks = JsonSerializer.Deserialize<List<TaskItem>>(jsonString);
+
+        _tasks.Clear();
+        _allTasks.Clear();
+
+        if (tasks != null)
+        {
+            foreach (var task in tasks)
+            {
+                _tasks.Add(task);
+                _allTasks.Add(task);
+            }
+
+            StatusText.Text = $"✓ Loaded {tasks.Count} tasks";
+            StatusText.Foreground = Avalonia.Media.Brushes.Blue;
         }
     }
 }
