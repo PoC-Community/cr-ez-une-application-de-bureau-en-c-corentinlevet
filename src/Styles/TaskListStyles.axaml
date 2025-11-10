@@ -1,0 +1,52 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Styles pour le Border RACINE dans le DataTemplate des tâches -->
+    <Style Selector="ListBoxItem Border#TaskCardRoot">
+        <Setter Property="Background" Value="#FAFBFC"/>
+        <Setter Property="BorderBrush" Value="#E8EEF5"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="15"/>
+        <Setter Property="BoxShadow" Value="0 1 3 0 #10000000"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+                <ThicknessTransition Property="BorderThickness" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <!-- Hover sur une tâche NON sélectionnée -->
+    <Style Selector="ListBoxItem:pointerover:not(:selected) Border#TaskCardRoot">
+        <Setter Property="Background" Value="#F0F4F8"/>
+        <Setter Property="BorderBrush" Value="#4A90E2"/>
+        <Setter Property="BoxShadow" Value="0 2 8 0 #20000000"/>
+    </Style>
+    
+    <!-- Tâche sélectionnée - BORDURE ROUGE -->
+    <Style Selector="ListBoxItem:selected Border#TaskCardRoot">
+        <Setter Property="Background" Value="#FFF5F5"/>
+        <Setter Property="BorderBrush" Value="#E74C3C"/>
+        <Setter Property="BorderThickness" Value="3"/>
+        <Setter Property="BoxShadow" Value="0 2 10 0 #30E74C3C"/>
+    </Style>
+    
+    <!-- Tâche sélectionnée avec focus -->
+    <Style Selector="ListBoxItem:selected:focus Border#TaskCardRoot">
+        <Setter Property="Background" Value="#FFF5F5"/>
+        <Setter Property="BorderBrush" Value="#E74C3C"/>
+        <Setter Property="BorderThickness" Value="3"/>
+        <Setter Property="BoxShadow" Value="0 2 10 0 #30E74C3C"/>
+    </Style>
+    
+    <!-- Tâche sélectionnée au hover -->
+    <Style Selector="ListBoxItem:selected:pointerover Border#TaskCardRoot">
+        <Setter Property="Background" Value="#FFEDED"/>
+        <Setter Property="BorderBrush" Value="#D62C1A"/>
+        <Setter Property="BorderThickness" Value="3"/>
+        <Setter Property="BoxShadow" Value="0 2 12 0 #40E74C3C"/>
+    </Style>
+    
+</Styles>
