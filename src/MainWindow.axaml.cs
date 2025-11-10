@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using TodoListApp.Models;
 
@@ -12,6 +13,7 @@ namespace TodoListApp;
 public partial class MainWindow : Window
 {
     private ObservableCollection<TaskItem> _tasks = new();
+    private List<TaskItem> _allTasks = new();
     private const string DataFolder = "data";
     private const string JsonFilePath = "data/tasks.json";
 
@@ -23,6 +25,8 @@ public partial class MainWindow : Window
         AddButton.Click += OnAddClick;
         DeleteButton.Click += OnDeleteClick;
         SaveButton.Click += OnSaveClick;
+        FilterButton.Click += OnFilterClick;
+        ClearFilterButton.Click += OnClearFilterClick;
 
         // Charger les tâches au démarrage
         LoadTasks();
@@ -32,9 +36,33 @@ public partial class MainWindow : Window
     {
         if (!string.IsNullOrWhiteSpace(TaskInput.Text))
         {
-            _tasks.Add(new TaskItem { Title = TaskInput.Text });
+            var task = new TaskItem 
+            { 
+                Title = TaskInput.Text,
+                Tags = CleanupTags(TagsInput.Text ?? string.Empty)
+            };
+            
+            _tasks.Add(task);
+            _allTasks.Add(task);
+            
             TaskInput.Text = string.Empty;
+            TagsInput.Text = string.Empty;
         }
+    }
+
+    private string CleanupTags(string tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return string.Empty;
+
+        // Séparer par virgules, nettoyer les espaces, supprimer les doublons
+        var tagList = tags.Split(',')
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return string.Join(", ", tagList);
     }
 
     private void OnDeleteClick(object? sender, RoutedEventArgs e)
@@ -42,7 +70,47 @@ public partial class MainWindow : Window
         if (TaskList.SelectedItem is TaskItem selected)
         {
             _tasks.Remove(selected);
+            _allTasks.Remove(selected);
         }
+    }
+
+    private void OnFilterClick(object? sender, RoutedEventArgs e)
+    {
+        var filterTag = TagFilterInput.Text?.Trim().ToLower();
+        
+        if (string.IsNullOrWhiteSpace(filterTag))
+        {
+            StatusText.Text = "Please enter a tag to filter";
+            StatusText.Foreground = Avalonia.Media.Brushes.Orange;
+            return;
+        }
+
+        _tasks.Clear();
+        var filteredTasks = _allTasks.Where(t => 
+            !string.IsNullOrWhiteSpace(t.Tags) && 
+            t.Tags.ToLower().Contains(filterTag)
+        ).ToList();
+
+        foreach (var task in filteredTasks)
+        {
+            _tasks.Add(task);
+        }
+
+        StatusText.Text = $"✓ Filtered by '{filterTag}' - {filteredTasks.Count} task(s) found";
+        StatusText.Foreground = Avalonia.Media.Brushes.Blue;
+    }
+
+    private void OnClearFilterClick(object? sender, RoutedEventArgs e)
+    {
+        _tasks.Clear();
+        foreach (var task in _allTasks)
+        {
+            _tasks.Add(task);
+        }
+
+        TagFilterInput.Text = string.Empty;
+        StatusText.Text = $"✓ Filter cleared - showing all {_allTasks.Count} task(s)";
+        StatusText.Foreground = Avalonia.Media.Brushes.Blue;
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
@@ -55,18 +123,18 @@ public partial class MainWindow : Window
                 Directory.CreateDirectory(DataFolder);
             }
 
-            // Sérialiser la collection de tâches en JSON avec indentation
+            // Sérialiser la collection complète de tâches (pas juste la vue filtrée)
             var options = new JsonSerializerOptions 
             { 
                 WriteIndented = true 
             };
-            string jsonString = JsonSerializer.Serialize(_tasks, options);
+            string jsonString = JsonSerializer.Serialize(_allTasks, options);
 
             // Écrire le JSON dans le fichier
             File.WriteAllText(JsonFilePath, jsonString);
 
             // Afficher un message de confirmation
-            StatusText.Text = $"✓ Tasks saved successfully! ({_tasks.Count} tasks)";
+            StatusText.Text = $"✓ Tasks saved successfully! ({_allTasks.Count} tasks)";
             StatusText.Foreground = Avalonia.Media.Brushes.Green;
         }
         catch (Exception ex)
@@ -90,13 +158,16 @@ public partial class MainWindow : Window
                 // Désérialiser le JSON en liste de TaskItem
                 var tasks = JsonSerializer.Deserialize<List<TaskItem>>(jsonString);
 
-                // Vider la collection actuelle et ajouter les tâches chargées
+                // Vider les collections et ajouter les tâches chargées
                 _tasks.Clear();
+                _allTasks.Clear();
+                
                 if (tasks != null)
                 {
                     foreach (var task in tasks)
                     {
                         _tasks.Add(task);
+                        _allTasks.Add(task);
                     }
 
                     StatusText.Text = $"✓ Loaded {tasks.Count} tasks from file";

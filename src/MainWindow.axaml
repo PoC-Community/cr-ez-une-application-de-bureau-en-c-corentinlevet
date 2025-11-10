@@ -3,22 +3,39 @@
         xmlns:models="using:TodoListApp.Models"
         x:Class="TodoListApp.MainWindow"
         Title="To-Do List"
-        Width="400" Height="500">
+        Width="400" Height="600">
 
     <StackPanel Margin="20">
         <TextBlock Text="My To-Do List" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,10"/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
             <TextBox x:Name="TaskInput" Width="250" Watermark="Enter a task..."/>
             <Button x:Name="AddButton" Content="Add" Margin="10,0,0,0" Width="80"/>
+        </StackPanel>
+
+        <TextBox x:Name="TagsInput" Width="340" Watermark="Tags (comma-separated, e.g., work, urgent)" Margin="0,0,0,10"/>
+
+        <!-- Filtre de tags -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Filter by tag:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBox x:Name="TagFilterInput" Width="150" Watermark="Enter tag..."/>
+            <Button x:Name="FilterButton" Content="Filter" Margin="10,0,5,0" Width="60"/>
+            <Button x:Name="ClearFilterButton" Content="Clear" Width="60"/>
         </StackPanel>
 
         <ListBox x:Name="TaskList" Height="300">
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:TaskItem">
-                    <StackPanel Orientation="Horizontal">
-                        <CheckBox IsChecked="{Binding IsCompleted}" Margin="0,0,10,0"/>
-                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                    <StackPanel Margin="0,5,0,5">
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox IsChecked="{Binding IsCompleted}" Margin="0,0,10,0"/>
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontWeight="Bold"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Tags}" 
+                                   Foreground="Gray" 
+                                   FontSize="11"
+                                   Margin="25,2,0,0"
+                                   IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
