@@ -30,6 +30,8 @@ public partial class MainWindow : Window
         TodayFilterButton.Click += OnTodayFilterClick;
         WeekFilterButton.Click += OnWeekFilterClick;
         OverdueFilterButton.Click += OnOverdueFilterClick;
+        CompleteAllButton.Click += OnCompleteAllClick;
+        ClearCompletedButton.Click += OnClearCompletedClick;
 
         // Charger les tâches au démarrage
         LoadTasks();
@@ -251,6 +253,131 @@ public partial class MainWindow : Window
             // Autres erreurs (permissions, etc.)
             StatusText.Text = $"✗ Error loading tasks: {ex.Message}";
             StatusText.Foreground = Avalonia.Media.Brushes.Red;
+        }
+    }
+
+    private void OnCompleteAllClick(object? sender, RoutedEventArgs e)
+    {
+        foreach (var task in _allTasks)
+        {
+            task.IsCompleted = true;
+        }
+
+        StatusText.Text = $"✓ All tasks marked as completed ({_allTasks.Count} tasks)";
+        StatusText.Foreground = Avalonia.Media.Brushes.Green;
+    }
+
+    private void OnClearCompletedClick(object? sender, RoutedEventArgs e)
+    {
+        var completedTasks = _allTasks.Where(t => t.IsCompleted).ToList();
+        var count = completedTasks.Count;
+
+        foreach (var task in completedTasks)
+        {
+            _tasks.Remove(task);
+            _allTasks.Remove(task);
+        }
+
+        StatusText.Text = $"✓ Cleared {count} completed task(s)";
+        StatusText.Foreground = Avalonia.Media.Brushes.Green;
+    }
+
+    private async void OnTaskListDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        // Récupérer l'élément cliqué
+        if (e.Source is Control control)
+        {
+            // Chercher le TaskItem dans le DataContext
+            var item = control.DataContext as TaskItem;
+            if (item == null)
+            {
+                // Essayer de remonter l'arbre visuel
+                var parent = control.Parent;
+                while (parent != null && item == null)
+                {
+                    item = parent.DataContext as TaskItem;
+                    parent = parent.Parent;
+                }
+            }
+
+            if (item != null)
+            {
+                // Créer une boîte de dialogue pour éditer le titre
+                var dialog = new Window
+                {
+                    Title = "Edit Task",
+                    Width = 400,
+                    Height = 150,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var stackPanel = new StackPanel { Margin = new Avalonia.Thickness(20) };
+                
+                var label = new TextBlock 
+                { 
+                    Text = "Edit task title:", 
+                    Margin = new Avalonia.Thickness(0, 0, 0, 10) 
+                };
+                
+                var textBox = new TextBox 
+                { 
+                    Text = item.Title,
+                    Watermark = "Enter new title...",
+                    Margin = new Avalonia.Thickness(0, 0, 0, 10)
+                };
+
+                var buttonPanel = new StackPanel 
+                { 
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+                };
+
+                var okButton = new Button 
+                { 
+                    Content = "OK", 
+                    Width = 80,
+                    Margin = new Avalonia.Thickness(0, 0, 10, 0)
+                };
+                
+                var cancelButton = new Button 
+                { 
+                    Content = "Cancel", 
+                    Width = 80 
+                };
+
+                okButton.Click += (s, args) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(textBox.Text))
+                    {
+                        item.Title = textBox.Text;
+                        
+                        // Forcer le rafraîchissement de l'affichage
+                        var index = _tasks.IndexOf(item);
+                        if (index >= 0)
+                        {
+                            _tasks.RemoveAt(index);
+                            _tasks.Insert(index, item);
+                        }
+                        
+                        StatusText.Text = "✓ Task updated";
+                        StatusText.Foreground = Avalonia.Media.Brushes.Green;
+                    }
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, args) => dialog.Close();
+
+                buttonPanel.Children.Add(okButton);
+                buttonPanel.Children.Add(cancelButton);
+
+                stackPanel.Children.Add(label);
+                stackPanel.Children.Add(textBox);
+                stackPanel.Children.Add(buttonPanel);
+
+                dialog.Content = stackPanel;
+
+                await dialog.ShowDialog(this);
+            }
         }
     }
 }

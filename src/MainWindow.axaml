@@ -37,13 +37,17 @@
             <Button x:Name="ClearFilterButton" Content="Clear All" Width="70"/>
         </StackPanel>
 
-        <ListBox x:Name="TaskList" Height="250">
+        <ListBox x:Name="TaskList" Height="250" DoubleTapped="OnTaskListDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:TaskItem">
                     <StackPanel Margin="0,5,0,5">
                         <StackPanel Orientation="Horizontal">
                             <CheckBox IsChecked="{Binding IsCompleted}" Margin="0,0,10,0"/>
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontWeight="Bold"/>
+                            <TextBlock x:Name="TitleTextBlock" 
+                                       Text="{Binding Title}" 
+                                       VerticalAlignment="Center" 
+                                       FontWeight="Bold"
+                                       Tag="{Binding}"/>
                         </StackPanel>
                         <TextBlock Text="{Binding Tags}" 
                                    Foreground="Gray" 
@@ -69,6 +73,12 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+
+        <!-- Actions globales -->
+        <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Center">
+            <Button x:Name="CompleteAllButton" Content="✓ Complete All" Width="120" Margin="0,0,5,0"/>
+            <Button x:Name="ClearCompletedButton" Content="🗑 Clear Completed" Width="140"/>
+        </StackPanel>
 
         <Button x:Name="DeleteButton" Content="Delete selected" Margin="0,10,0,0"/>
         <Button x:Name="SaveButton" Content="Save to JSON" Margin="0,10,0,0"/>
